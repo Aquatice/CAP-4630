@@ -1,0 +1,130 @@
+%%%%%%%%% Two-Room Blocks World Planner %%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Based on the single-room planner provided in
+%%%
+%%% CAP 4630
+%%% Artificial Intelligence:
+%%%
+%%% Francisco Samuel Rios
+%%% FALL 2016
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+:- module( planner,
+	   [
+	       plan/4,change_state/3,conditions_met/2,member_state/2,
+	       move/3,go/2,test/0,test2/0,test3/0
+	   ]).
+
+:- [utils].
+
+plan(State, Goal, _, Moves) :-	equal_set(State, Goal),
+				write('moves are'), nl,
+				reverse_print_stack(Moves).
+plan(State, Goal, Been_list, Moves) :-
+				move(Name, Preconditions, Actions),
+				conditions_met(Preconditions, State),
+				change_state(State, Actions, Child_state),
+				not(member_state(Child_state, Been_list)),
+				stack(Child_state, Been_list, New_been_list),
+				stack(Name, Moves, New_moves),
+			plan(Child_state, Goal, New_been_list, New_moves),!.
+
+change_state(S, [], S).
+change_state(S, [add(P)|T], S_new) :-	change_state(S, T, S2),
+					add_to_set(P, S2, S_new), !.
+change_state(S, [del(P)|T], S_new) :-	change_state(S, T, S2),
+					remove_from_set(P, S2, S_new), !.
+conditions_met(P, S) :- subset(P, S).
+
+member_state(S, [H|_]) :-	equal_set(S, H).
+member_state(S, [_|T]) :-	member_state(S, T).
+
+/* move types, two room style */
+
+move(pickup(X), [handloc(Z), handempty, clear(X, Z), on(X, Y, Z)],
+		[del(handempty), del(clear(X, Z)), del(on(X, Y, Z)),
+				 add(clear(Y, Z)), add(holding(X, Z))]).
+
+move(pickup(X), [handempty(Z), clear(X,Z), on(X, Y, Z)],
+		[del(handempty(Z)), del(clear(X, Z)), del(on(X, Y, Z)),
+		 add(clear(Y, Z)),  add(holding(X, Z))]).
+
+move(pickup(X), [handloc(Y), handempty, ontable(X, Y), clear(X, Y)],
+		[del(handempty), del(clear(X, Y)), del(ontable(X, Y)),
+		                    add(holding(X, Y))]).
+
+move(putdown(X), [holding(X, Y), roomc(C), handin(C)],
+		[del(roomc(C)), del(holding(X, Y)), add(ontable(X, C)),
+		 add(clear(X, C)), add(handempty)]).
+
+move(stack(X, Y), [holding(X, Z), roomc(C), handloc(C), clear(Y, C)],
+		[del(roomc(C)), del(holding(X, Z)), del(clear(Y, C)),
+		 add(handempty), add(on(X, Y, C)), add(clear(X))]).
+
+/* move types, single room style */
+
+move(putdown(X), [holding(X, Y), handloc(Y)],
+                [del(holding(X, Y)), add(ontable(X, Y)), add(clear(X, Y)),
+                 add(handempty)]).
+
+move(stack(X, Y), [holding(X, Z), handloc(Z), clear(Y, Z)],
+	        [del(holding(X, Z)), del(clear(Y, Z)), add(handempty),
+		 add(on(X, Y, Z)), add(clear(X, Z))]).
+
+/* moving the hand between rooms */
+% Room 2 to room 1
+
+move(goroom1, [handloc(2), roomc(2)],
+             [del(handloc(2)), add(handloc(1)), add(roomc(1)), del(roomc(2))]).
+
+move(goroom1, [handloc(2)],
+	     [del(handloc(2)), add(handloc(1)), add(roomc(1))]).
+
+/* moving the hand between rooms */
+% Room 1 to room 2
+
+move(goroom2, [handloc(1), roomc(1)],
+             [del(handloc(1)), add(handloc(2)), add(roomc(2)), del(roomc(1))]).
+
+move(goroom2, [handloc(1)],
+	     [del(handloc(1)), add(handloc(2)), add(roomc(2))]).
+
+/* Look for any backtracks */
+
+move(pickup(X), [handloc(Z), handempty, clear(X, Z), on(X, Y, Z)],
+                [del(handempty), del(clear(X, Z)), del(on(X, Y, Z)),
+				 add(clear(Y, Z)), add(holding(X, Z))]).
+
+move(putdown(X), [holding(X, Y), handloc(Y)],
+		 [del(holding(X, Y)), add(ontable(X, Y)), add(clear(X, Y)),
+		                      add(handempty)]).
+
+move(stack(X, Y), [holding(X, Z), handloc(Z), clear(Y, Z)],
+		  [del(holding(X, Z)), del(clear(Y, Z)), add(handempty),
+		                       add(on(X, Y, Z)), add(clear(X, Z))]).
+
+move(pickup(X), [roomc(C), handloc(Z), handempty, clear(X, Z), on(X, Y, Z)],
+                [del(roomc(C)), del(handempty), del(clear(X, Z)),
+		 del(on(X, Y, Z)), add(clear(Y, Z)), add(holding(X, Z))]).
+
+move(putdown(X), [roomc(C), holding(X, Y), handloc(Y)],
+		 [del(roomc(C)), del(holding(X, Y)), add(ontable(X, Y)),
+		  add(clear(X, Y)), add(handempty)]).
+
+move(stack(X, Y), [roomc(C), holding(X, Z), handloc(Z), clear(Y, Z)],
+		  [del(roomc(C)), del(holding(X, Z)), del(clear(Y, Z)),
+		   add(handempty), add(on(X, Y, Z)), add(clear(X, Z))]).
+
+/* run commands */
+
+
+go(S, G) :- plan(S, G, [S], []).
+
+test :- go([handloc(1), handempty, ontable(b, 1), ontable(c, 1), on(a, b, 1), clear(c, 1), clear(a, 1)],
+	   [handloc(1), handempty, ontable(c, 1), on(a, b, 1), on(b, c, 1), clear(a, 1)]).
+
+test2 :- go([handloc(1), handempty, ontable(b, 1), ontable(c, 1), on(a, b, 1), clear(c, 1), clear(a, 1)],
+	    [handempty, ontable(a, 1), ontable(b, 1), on(c, b, 1), clear(a, 1), clear(c, 1)]).
+
+test3 :- go([handloc(1), handempty, ontable(b, 1), on(a, b, 1), clear(a, 1)],
+	   [handloc(1), handempty, ontable(b, 2), on(a, b, 2), clear(a, 2)]).
