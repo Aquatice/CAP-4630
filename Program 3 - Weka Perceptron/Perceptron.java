@@ -24,6 +24,12 @@ public class Perceptron implements weka.classifiers.Classifier
 	// Post-conditions: The constructor creates a new perceptron object
 	public Perceptron(String[] options)
 	{
+		// Print the header for the output
+		System.out.println("\nUniversity of Central Florida ");
+		System.out.println("CAP4630 Artificial Intelligence - Fall 2016");
+		System.out.println("Perceptron Classifier by Francisco Samuel Rios \n");
+		
+		// Parse and assign the passed in options
 		this.bias             = 1;
 		this.fileName 		  = options[0];
 		this.epoch    		  = Integer.parseInt(options[1]);
@@ -262,7 +268,7 @@ public class Perceptron implements weka.classifiers.Classifier
 	
 		// Prints out the required data
 		System.out.println("Source file: " + this.fileName);
-		System.out.println("Number of iterations: " + this.epoch);
+		System.out.println("Training epochs: " + this.epoch);
 		System.out.println("Learning rate: " + this.learningRate + "\n");
 		
 		System.out.println("Total # weight updates = " + this.weightUpdates);
